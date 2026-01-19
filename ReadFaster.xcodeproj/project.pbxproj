@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -86,7 +86,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		144C10CD16BD53303441C64F /* ReadFaster-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ReadFaster-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		144C10CD16BD53303441C64F /* ReadFaster-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "ReadFaster-macOS.app"; path = "Read Faster.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2E192411840FB34683086C67 /* RSVPEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSVPEngine.swift; sourceTree = "<group>"; };
 		304C81B6697655A5B455D9EA /* ReadingProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingProgress.swift; sourceTree = "<group>"; };
 		3143C7081F60ACE51AB214EA /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -113,7 +113,7 @@
 		92607DD353C1966E4122DE2B /* DocumentParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentParser.swift; sourceTree = "<group>"; };
 		987611D53FA631631B8E54E9 /* SentenceContextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SentenceContextView.swift; sourceTree = "<group>"; };
 		A246AD6DC2F1045742A891B6 /* MonaspaceXenon-Regular.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "MonaspaceXenon-Regular.otf"; sourceTree = "<group>"; };
-		B07142487F187B38A89FB7F7 /* ReadFaster-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "ReadFaster-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B07142487F187B38A89FB7F7 /* Read Faster.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Read Faster.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B2BC97AC289F4141AEBFC63D /* ChaptersSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaptersSheet.swift; sourceTree = "<group>"; };
 		B71D576E9AA208C562C92681 /* BookmarksSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarksSheet.swift; sourceTree = "<group>"; };
 		C29702C5A598CAC90D17C43C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -256,7 +256,7 @@
 		A03A9F3D944F7BEA4BF4A745 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				B07142487F187B38A89FB7F7 /* ReadFaster-iOS.app */,
+				B07142487F187B38A89FB7F7 /* Read Faster.app */,
 				144C10CD16BD53303441C64F /* ReadFaster-macOS.app */,
 			);
 			name = Products;
@@ -358,7 +358,7 @@
 				4759AC1D5F68C3C41973BFF0 /* SwiftSoup */,
 			);
 			productName = "ReadFaster-iOS";
-			productReference = B07142487F187B38A89FB7F7 /* ReadFaster-iOS.app */;
+			productReference = B07142487F187B38A89FB7F7 /* Read Faster.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -392,7 +392,6 @@
 				A72D931A6768FFD5EFDD5758 /* XCRemoteSwiftPackageReference "SwiftSoup" */,
 				38F5FA900546326F1B79E4D5 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
 			);
-			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -639,6 +638,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReadFaster/Resources/ReadFaster.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 5JZV7V6Y4Z;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ReadFaster/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -703,6 +703,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReadFaster/Resources/ReadFaster.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 5JZV7V6Y4Z;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ReadFaster/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (

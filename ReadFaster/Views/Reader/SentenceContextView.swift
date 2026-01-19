@@ -1,23 +1,50 @@
 import SwiftUI
 
 /// Displays the current sentence with the active word highlighted
-/// Renders as a natural paragraph with smooth underline highlight
+/// Features a smoothly animating underline that moves between words
 struct SentenceContextView: View {
     let words: [String]
     let currentWordIndex: Int
+    
+    @State private var wordFrames: [Int: CGRect] = [:]
+    @Namespace private var animation
     
     var body: some View {
         if words.isEmpty {
             EmptyView()
         } else {
-            ParagraphFlowLayout(spacing: 5, lineSpacing: 10) {
-                ForEach(Array(words.enumerated()), id: \.offset) { index, word in
-                    wordView(word: word, index: index)
+            ZStack(alignment: .topLeading) {
+                // Words
+                ParagraphFlowLayout(spacing: 5, lineSpacing: 12) {
+                    ForEach(Array(words.enumerated()), id: \.offset) { index, word in
+                        wordView(word: word, index: index)
+                            .background(
+                                GeometryReader { geo in
+                                    Color.clear.preference(
+                                        key: WordFramePreference.self,
+                                        value: [index: geo.frame(in: .named("sentenceContainer"))]
+                                    )
+                                }
+                            )
+                    }
                 }
+                
+                // Animated underline
+                if let frame = wordFrames[currentWordIndex] {
+                    Rectangle()
+                        .fill(Color.accentColor)
+                        .frame(width: frame.width, height: 2)
+                        .offset(x: frame.minX, y: frame.maxY + 1)
+                        .animation(.easeOut(duration: 0.15), value: currentWordIndex)
+                }
+            }
+            .coordinateSpace(name: "sentenceContainer")
+            .onPreferenceChange(WordFramePreference.self) { frames in
+                wordFrames = frames
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
-            .clipped() // Prevent overflow
+            .clipped()
         }
     }
     
@@ -29,15 +56,6 @@ struct SentenceContextView: View {
         Text(word)
             .font(AppFont.regular(size: 16))
             .foregroundStyle(wordColor(isCurrent: isCurrent, isPast: isPast))
-            .overlay(alignment: .bottom) {
-                if isCurrent {
-                    // Smooth underline highlight
-                    Rectangle()
-                        .fill(Color.accentColor)
-                        .frame(height: 2)
-                        .offset(y: 2)
-                }
-            }
     }
     
     private func wordColor(isCurrent: Bool, isPast: Bool) -> Color {
@@ -51,10 +69,22 @@ struct SentenceContextView: View {
     }
 }
 
+// MARK: - Preference Key for tracking word positions
+
+struct WordFramePreference: PreferenceKey {
+    static var defaultValue: [Int: CGRect] = [:]
+    
+    static func reduce(value: inout [Int: CGRect], nextValue: () -> [Int: CGRect]) {
+        value.merge(nextValue()) { $1 }
+    }
+}
+
+// MARK: - Flow Layout
+
 /// A flow layout optimized for paragraph-like text display
 struct ParagraphFlowLayout: Layout {
     var spacing: CGFloat = 5
-    var lineSpacing: CGFloat = 10
+    var lineSpacing: CGFloat = 12
     
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let result = layout(proposal: proposal, subviews: subviews)
@@ -142,31 +172,40 @@ struct ParagraphFlowLayout: Layout {
 
 // MARK: - Preview
 
-#Preview("Paragraph style") {
-    VStack(spacing: 20) {
-        SentenceContextView(
-            words: ["System", "Architecture", "A", "system's", "architecture", "is", "a", "representation", "of", "a", "system", "in", "which", "there", "is", "a", "mapping", "of", "the", "software", "architecture", "onto", "the", "hardware", "architecture."],
-            currentWordIndex: 18
-        )
-        .frame(maxHeight: 150)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-        .frame(maxWidth: 600)
+#Preview("Animated underline") {
+    struct PreviewWrapper: View {
+        @State private var index = 5
+        let words = ["The", "quick", "brown", "fox", "jumps", "over", "the", "lazy", "dog."]
         
-        Text("the")
-            .font(AppFont.rsvpWord(size: 48))
+        var body: some View {
+            VStack(spacing: 30) {
+                SentenceContextView(words: words, currentWordIndex: index)
+                    .frame(maxHeight: 100)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    .frame(maxWidth: 400)
+                
+                HStack {
+                    Button("Previous") { 
+                        if index > 0 { index -= 1 }
+                    }
+                    Button("Next") { 
+                        if index < words.count - 1 { index += 1 }
+                    }
+                }
+            }
+            .padding()
+        }
     }
-    .padding()
+    return PreviewWrapper()
 }
 
-#Preview("Short sentence") {
-    VStack(spacing: 20) {
-        SentenceContextView(
-            words: ["The", "quick", "brown", "fox", "jumps."],
-            currentWordIndex: 2
-        )
-        .frame(maxHeight: 100)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-        .frame(maxWidth: 400)
-    }
+#Preview("Long sentence") {
+    SentenceContextView(
+        words: ["System", "Architecture", "A", "system's", "architecture", "is", "a", "representation", "of", "a", "system", "in", "which", "there", "is", "a", "mapping", "of", "the", "software", "architecture", "onto", "the", "hardware", "architecture."],
+        currentWordIndex: 18
+    )
+    .frame(maxHeight: 150)
+    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+    .frame(maxWidth: 600)
     .padding()
 }
