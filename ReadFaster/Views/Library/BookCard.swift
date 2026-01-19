@@ -12,12 +12,12 @@ struct BookCard: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(book.title)
-                    .font(AppFont.headline)
+                    .font(AppFont.regular(size: 15))
                     .lineLimit(2)
 
                 if let author = book.author {
                     Text(author)
-                        .font(AppFont.subheadline)
+                        .font(AppFont.regular(size: 13))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }

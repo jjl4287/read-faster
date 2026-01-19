@@ -56,22 +56,15 @@ struct RSVPView: View {
             ToolbarItem(placement: .primaryAction) {
                 HStack(spacing: 8) {
                     Button {
-                        addBookmark()
-                    } label: {
-                        Image(systemName: "bookmark")
-                    }
-                    .badge(book.bookmarks.count > 0 ? "\(book.bookmarks.count)" : nil)
-
-                    Button {
                         showingBookmarks = true
                     } label: {
-                        Image(systemName: "list.bullet")
+                        Image(systemName: book.bookmarks.isEmpty ? "bookmark" : "bookmark.fill")
                     }
 
                     if book.hasChapters {
-                        Button {
+                    Button {
                             showingChapters = true
-                        } label: {
+                    } label: {
                             Image(systemName: "list.bullet.indent")
                         }
                     }
@@ -85,8 +78,10 @@ struct RSVPView: View {
             }
         }
         .sheet(isPresented: $showingBookmarks) {
-            BookmarksSheet(book: book, engine: engine)
-                .presentationDetents([.medium, .large])
+            BookmarksSheet(book: book, engine: engine) {
+                addBookmark()
+            }
+            .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showingChapters) {
             ChaptersSheet(book: book, engine: engine)
@@ -154,19 +149,17 @@ struct RSVPView: View {
     @ViewBuilder
     private func wordDisplayArea(geometry: GeometryProxy) -> some View {
         VStack(spacing: 0) {
-            // Sentence context - fixed box above RSVP word
-            Group {
-                if engine.showSentenceContext && !engine.currentSentenceWords.isEmpty {
-                    SentenceContextView(
-                        words: engine.currentSentenceWords,
-                        currentWordIndex: engine.currentWordIndexInSentence
-                    )
-                    .frame(maxWidth: min(geometry.size.width * 0.95, 600))
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-                }
+            // Sentence context - dynamic height, fixed max
+            if engine.showSentenceContext && !engine.currentSentenceWords.isEmpty {
+                SentenceContextView(
+                    words: engine.currentSentenceWords,
+                    currentWordIndex: engine.currentWordIndexInSentence
+                )
+                .frame(maxWidth: min(geometry.size.width * 0.95, 600), maxHeight: 160)
+                .fixedSize(horizontal: false, vertical: true)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                .padding(.bottom, 20)
             }
-            .frame(height: 132) // Fixed height for ~3 lines of sentence context
-            .padding(.bottom, 16)
             
             // Main RSVP word - always in the same position
             WordDisplay(word: engine.currentWord)
@@ -176,11 +169,19 @@ struct RSVPView: View {
                     engine.toggle()
                 }
 
-            // Status text
+            // Status: word count and time remaining
+            HStack(spacing: 16) {
             Text(statusText)
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .padding(.top, 16)
+                    .font(AppFont.caption)
+                    .foregroundStyle(.tertiary)
+                
+                if let timeRemaining = timeRemainingText {
+                    Text(timeRemaining)
+                        .font(AppFont.caption)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .padding(.top, 16)
         }
     }
 
@@ -242,6 +243,26 @@ struct RSVPView: View {
         let total = engine.totalWords
         let percent = Int(engine.progress * 100)
         return "\(current) / \(total) (\(percent)%)"
+    }
+    
+    /// Calculates time remaining based on current WPM and words left
+    private var timeRemainingText: String? {
+        let wordsRemaining = engine.totalWords - engine.currentIndex
+        guard wordsRemaining > 0, engine.wordsPerMinute > 0 else { return nil }
+        
+        let minutesRemaining = Double(wordsRemaining) / Double(engine.wordsPerMinute)
+        let totalSeconds = Int(minutesRemaining * 60)
+        
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        
+        if hours > 0 {
+            return "\(hours)h \(minutes)m left"
+        } else if minutes > 0 {
+            return "\(minutes)m left"
+        } else {
+            return "<1m left"
+        }
     }
 
     private func setupEngine() {

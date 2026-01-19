@@ -10,17 +10,13 @@ struct SentenceContextView: View {
         if words.isEmpty {
             EmptyView()
         } else {
-            GeometryReader { geometry in
-                // Build the sentence as flowing text
-                ParagraphFlowLayout(spacing: 4, lineSpacing: 6) {
-                    ForEach(Array(words.enumerated()), id: \.offset) { index, word in
-                        wordView(word: word, index: index)
-                    }
+            ParagraphFlowLayout(spacing: 5, lineSpacing: 8) {
+                ForEach(Array(words.enumerated()), id: \.offset) { index, word in
+                    wordView(word: word, index: index)
                 }
-                .frame(width: geometry.size.width, height: geometry.size.height, alignment: .center)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
         }
     }
     
@@ -29,20 +25,17 @@ struct SentenceContextView: View {
         let isCurrent = index == currentWordIndex
         let isPast = index < currentWordIndex
         
+        // All words have identical sizing - only color changes
         Text(word)
-            .font(AppFont.regular(size: 16))
-            .fontWeight(isCurrent ? .semibold : .regular)
+            .font(AppFont.regular(size: 17))
             .foregroundStyle(wordColor(isCurrent: isCurrent, isPast: isPast))
-            .padding(.horizontal, isCurrent ? 6 : 0)
-            .padding(.vertical, isCurrent ? 2 : 0)
             .background {
                 if isCurrent {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.accentColor.opacity(0.15))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 4)
-                                .strokeBorder(Color.accentColor.opacity(0.4), lineWidth: 1)
-                        )
+                    // Underline-style highlight that doesn't affect layout
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.accentColor.opacity(0.2))
+                        .padding(.horizontal, -4)
+                        .padding(.vertical, -2)
                 }
             }
     }
@@ -60,8 +53,8 @@ struct SentenceContextView: View {
 
 /// A flow layout optimized for paragraph-like text display
 struct ParagraphFlowLayout: Layout {
-    var spacing: CGFloat = 4
-    var lineSpacing: CGFloat = 6
+    var spacing: CGFloat = 5
+    var lineSpacing: CGFloat = 8
     
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let result = layout(proposal: proposal, subviews: subviews)
@@ -152,14 +145,14 @@ struct ParagraphFlowLayout: Layout {
 #Preview("Paragraph style") {
     VStack(spacing: 20) {
         SentenceContextView(
-            words: ["That", "is,", "many", "design", "decisions", "are", "left", "unbound", "by", "the", "architecture—it", "is,", "after", "all,", "an", "abstraction—and", "depend", "on", "the", "discretion", "and", "good", "judgment", "of", "downstream", "designers", "and", "even", "implementers."],
-            currentWordIndex: 22
+            words: ["System", "Architecture", "A", "system's", "architecture", "is", "a", "representation", "of", "a", "system", "in", "which", "there", "is", "a", "mapping", "of", "the", "software", "architecture", "onto", "the", "hardware", "architecture."],
+            currentWordIndex: 18
         )
-        .frame(height: 120)
+        .frame(maxHeight: 150)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
         .frame(maxWidth: 600)
         
-        Text("judgment")
+        Text("the")
             .font(AppFont.rsvpWord(size: 48))
     }
     .padding()
@@ -171,7 +164,7 @@ struct ParagraphFlowLayout: Layout {
             words: ["The", "quick", "brown", "fox", "jumps."],
             currentWordIndex: 2
         )
-        .frame(height: 100)
+        .frame(maxHeight: 100)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
         .frame(maxWidth: 400)
     }

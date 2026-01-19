@@ -7,6 +7,13 @@ struct BookmarksSheet: View {
 
     let book: Book
     let engine: RSVPEngine
+    let onAddBookmark: () -> Void
+
+    init(book: Book, engine: RSVPEngine, onAddBookmark: @escaping () -> Void = {}) {
+        self.book = book
+        self.engine = engine
+        self.onAddBookmark = onAddBookmark
+    }
 
     var body: some View {
         NavigationStack {
@@ -15,7 +22,15 @@ struct BookmarksSheet: View {
                     ContentUnavailableView {
                         Label("No Bookmarks", systemImage: "bookmark")
                     } description: {
-                        Text("Tap the bookmark button while reading to save your position.")
+                        Text("Add a bookmark to save your reading position.")
+                    } actions: {
+                        Button {
+                            onAddBookmark()
+                            dismiss()
+                        } label: {
+                            Label("Add Bookmark", systemImage: "plus")
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
                 } else {
                     List {
@@ -39,6 +54,17 @@ struct BookmarksSheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") {
                         dismiss()
+                    }
+                    .font(AppFont.body)
+                }
+                
+                if !book.bookmarks.isEmpty {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            onAddBookmark()
+                        } label: {
+                            Image(systemName: "plus")
+                        }
                     }
                 }
             }
@@ -68,25 +94,25 @@ struct BookmarkRow: View {
                     .foregroundStyle(Color.accentColor)
 
                 Text("Word \(bookmark.wordIndex + 1)")
-                    .font(.headline)
+                    .font(AppFont.headline)
 
                 Spacer()
 
                 Text(bookmark.dateCreated, style: .date)
-                    .font(.caption)
+                    .font(AppFont.caption)
                     .foregroundStyle(.secondary)
             }
 
             if let text = bookmark.highlightedText {
                 Text("...\(text)...")
-                    .font(.caption)
+                    .font(AppFont.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
             }
 
             if let note = bookmark.note, !note.isEmpty {
                 Text(note)
-                    .font(.subheadline)
+                    .font(AppFont.subheadline)
                     .foregroundStyle(.secondary)
             }
         }
