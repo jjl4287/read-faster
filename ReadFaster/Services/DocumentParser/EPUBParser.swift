@@ -47,22 +47,37 @@ struct EPUBParser: DocumentParser {
         }
 
         var containerData = Data()
-        _ = try archive.extract(containerEntry) { data in
-            containerData.append(data)
+        do {
+            _ = try archive.extract(containerEntry) { data in
+                containerData.append(data)
+            }
+        } catch {
+            throw DocumentParserError.parsingFailed("Could not extract container.xml: \(error.localizedDescription)")
         }
 
         guard let containerXML = String(data: containerData, encoding: .utf8) else {
-            throw DocumentParserError.parsingFailed("Could not read container.xml")
+            throw DocumentParserError.parsingFailed("Could not read container.xml as UTF-8")
         }
 
-        let doc = try SwiftSoup.parse(containerXML, "", Parser.xmlParser())
-        guard let rootFile = try doc.select("rootfile").first(),
-              let fullPath = try? rootFile.attr("full-path"),
-              !fullPath.isEmpty else {
-            throw DocumentParserError.parsingFailed("Could not find root file path")
-        }
+        do {
+            let doc = try SwiftSoup.parse(containerXML, "", Parser.xmlParser())
+            let rootFiles = try doc.select("rootfile")
 
-        return fullPath
+            guard let rootFile = rootFiles.first() else {
+                throw DocumentParserError.parsingFailed("No rootfile element found in container.xml")
+            }
+
+            let fullPath = try rootFile.attr("full-path")
+            guard !fullPath.isEmpty else {
+                throw DocumentParserError.parsingFailed("Empty full-path attribute in rootfile")
+            }
+
+            return fullPath
+        } catch let error as DocumentParserError {
+            throw error
+        } catch {
+            throw DocumentParserError.parsingFailed("Failed to parse container.xml: \(error.localizedDescription)")
+        }
     }
 
     private func parseOPF(archive: Archive, opfPath: String) throws -> (EPUBMetadata, [SpineItem], String) {
@@ -71,84 +86,182 @@ struct EPUBParser: DocumentParser {
         }
 
         var opfData = Data()
-        _ = try archive.extract(opfEntry) { data in
-            opfData.append(data)
+        do {
+            _ = try archive.extract(opfEntry) { data in
+                opfData.append(data)
+            }
+        } catch {
+            throw DocumentParserError.parsingFailed("Could not extract OPF file: \(error.localizedDescription)")
         }
 
         guard let opfXML = String(data: opfData, encoding: .utf8) else {
-            throw DocumentParserError.parsingFailed("Could not read OPF file")
+            throw DocumentParserError.parsingFailed("Could not read OPF file as UTF-8")
         }
 
         let basePath = (opfPath as NSString).deletingLastPathComponent
 
-        let doc = try SwiftSoup.parse(opfXML, "", Parser.xmlParser())
+        do {
+            let doc = try SwiftSoup.parse(opfXML, "", Parser.xmlParser())
 
-        // Extract metadata
-        let title = try doc.select("metadata title, dc\\:title").first()?.text()
-        let author = try doc.select("metadata creator, dc\\:creator").first()?.text()
-        let coverId = try doc.select("meta[name=cover]").first()?.attr("content")
+            // Extract metadata - try multiple selector patterns for compatibility
+            var title: String?
+            var author: String?
+            var coverId: String?
 
-        // Build manifest
-        var manifest: [String: ManifestItem] = [:]
-        for item in try doc.select("manifest item") {
-            let id = try item.attr("id")
-            let href = try item.attr("href")
-            let mediaType = try item.attr("media-type")
-            manifest[id] = ManifestItem(id: id, href: href, mediaType: mediaType)
-        }
-
-        // Build spine
-        var spine: [SpineItem] = []
-        for itemRef in try doc.select("spine itemref") {
-            let idref = try itemRef.attr("idref")
-            if let item = manifest[idref] {
-                spine.append(SpineItem(id: idref, href: item.href))
+            // Try to find title
+            if let titleEl = try doc.select("title").first() {
+                title = try titleEl.text()
             }
+            if title == nil || title?.isEmpty == true {
+                if let titleEl = try doc.select("dc|title").first() {
+                    title = try titleEl.text()
+                }
+            }
+
+            // Try to find author/creator
+            if let authorEl = try doc.select("creator").first() {
+                author = try authorEl.text()
+            }
+            if author == nil || author?.isEmpty == true {
+                if let authorEl = try doc.select("dc|creator").first() {
+                    author = try authorEl.text()
+                }
+            }
+
+            // Try to find cover ID
+            if let metaEl = try doc.select("meta[name=cover]").first() {
+                coverId = try metaEl.attr("content")
+            }
+
+            // Build manifest
+            var manifest: [String: ManifestItem] = [:]
+            let items = try doc.select("item")
+            for item in items {
+                let id = try item.attr("id")
+                let href = try item.attr("href")
+                let mediaType = try item.attr("media-type")
+                if !id.isEmpty && !href.isEmpty {
+                    manifest[id] = ManifestItem(id: id, href: href, mediaType: mediaType)
+                }
+            }
+
+            // Build spine
+            var spine: [SpineItem] = []
+            let itemRefs = try doc.select("itemref")
+            for itemRef in itemRefs {
+                let idref = try itemRef.attr("idref")
+                if let item = manifest[idref] {
+                    spine.append(SpineItem(id: idref, href: item.href))
+                }
+            }
+
+            let coverHref = coverId.flatMap { manifest[$0]?.href }
+            let metadata = EPUBMetadata(title: title, author: author, coverId: coverId, coverHref: coverHref)
+
+            return (metadata, spine, basePath)
+        } catch let error as DocumentParserError {
+            throw error
+        } catch {
+            throw DocumentParserError.parsingFailed("Failed to parse OPF file: \(error.localizedDescription)")
         }
-
-        let metadata = EPUBMetadata(title: title, author: author, coverId: coverId, coverHref: manifest[coverId ?? ""]?.href)
-
-        return (metadata, spine, basePath)
     }
 
     private func extractContent(archive: Archive, spine: [SpineItem], basePath: String) throws -> String {
         var fullContent = ""
+        var foundMainContent = false
+
+        // Patterns to skip (front matter)
+        let skipPatterns = [
+            "cover", "title", "toc", "nav", "copyright", "dedication",
+            "frontmatter", "front-matter", "halftitle", "half-title",
+            "series", "praise", "about", "colophon", "credits"
+        ]
 
         for item in spine {
-            let itemPath = basePath.isEmpty ? item.href : "\(basePath)/\(item.href)"
+            let hrefLower = item.href.lowercased()
 
-            guard let entry = archive[itemPath] else { continue }
-
-            var data = Data()
-            _ = try archive.extract(entry) { chunk in
-                data.append(chunk)
+            // Skip front matter files
+            let shouldSkip = skipPatterns.contains { pattern in
+                hrefLower.contains(pattern)
             }
 
-            guard let html = String(data: data, encoding: .utf8) else { continue }
+            // Once we find real content, stop skipping
+            if !foundMainContent && shouldSkip {
+                continue
+            }
 
-            do {
-                let doc = try SwiftSoup.parse(html)
-                let text = try doc.body()?.text() ?? ""
-                if !text.isEmpty {
+            // Handle URL-encoded paths and resolve relative paths
+            let decodedHref = item.href.removingPercentEncoding ?? item.href
+            let itemPath = basePath.isEmpty ? decodedHref : "\(basePath)/\(decodedHref)"
+
+            guard let entry = archive[itemPath] else {
+                // Try without base path as fallback
+                if let fallbackEntry = archive[decodedHref] {
+                    if let text = extractTextFromEntry(archive: archive, entry: fallbackEntry) {
+                        if !text.isEmpty && text.count > 100 {
+                            foundMainContent = true
+                        }
+                        if foundMainContent {
+                            fullContent += text + "\n\n"
+                        }
+                    }
+                }
+                continue
+            }
+
+            if let text = extractTextFromEntry(archive: archive, entry: entry) {
+                // Consider it main content if it has substantial text
+                if !text.isEmpty && text.count > 100 {
+                    foundMainContent = true
+                }
+                if foundMainContent {
                     fullContent += text + "\n\n"
                 }
-            } catch {
-                continue
             }
         }
 
         return fullContent.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private func extractTextFromEntry(archive: Archive, entry: Entry) -> String? {
+        var data = Data()
+        do {
+            _ = try archive.extract(entry) { chunk in
+                data.append(chunk)
+            }
+        } catch {
+            return nil
+        }
+
+        // Try UTF-8 first, then Latin-1
+        let html: String
+        if let utf8 = String(data: data, encoding: .utf8) {
+            html = utf8
+        } else if let latin1 = String(data: data, encoding: .isoLatin1) {
+            html = latin1
+        } else {
+            return nil
+        }
+
+        do {
+            let doc = try SwiftSoup.parse(html)
+            return try doc.body()?.text()
+        } catch {
+            return nil
+        }
+    }
+
     private func extractCover(archive: Archive, metadata: EPUBMetadata, basePath: String) throws -> Data? {
         guard let coverHref = metadata.coverHref else { return nil }
 
-        let coverPath = basePath.isEmpty ? coverHref : "\(basePath)/\(coverHref)"
+        let decodedHref = coverHref.removingPercentEncoding ?? coverHref
+        let coverPath = basePath.isEmpty ? decodedHref : "\(basePath)/\(decodedHref)"
 
-        guard let entry = archive[coverPath] else { return nil }
+        let entry = archive[coverPath] ?? archive[decodedHref]
+        guard let coverEntry = entry else { return nil }
 
         var data = Data()
-        _ = try archive.extract(entry) { chunk in
+        _ = try archive.extract(coverEntry) { chunk in
             data.append(chunk)
         }
 

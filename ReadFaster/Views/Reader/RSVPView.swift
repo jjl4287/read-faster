@@ -16,8 +16,13 @@ struct RSVPView: View {
         GeometryReader { geometry in
             ZStack {
                 // Background - allows glass to sample content
-                Color(.systemBackground)
+                #if os(macOS)
+                Color(NSColor.windowBackgroundColor)
                     .ignoresSafeArea()
+                #else
+                Color(UIColor.systemBackground)
+                    .ignoresSafeArea()
+                #endif
 
                 VStack(spacing: 0) {
                     Spacer()
@@ -230,63 +235,66 @@ struct RSVPView: View {
 struct WPMControl: View {
     @Binding var wpm: Int
     @State private var isExpanded = false
-    @Namespace private var wpmNamespace
+    @State private var sliderValue: Double = 300
 
     var body: some View {
-        GlassEffectContainer(spacing: 20) {
-            if isExpanded {
-                // Expanded slider view
-                HStack(spacing: 12) {
-                    Text("\(RSVPEngine.minWPM)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+        if isExpanded {
+            // Expanded slider view - simpler, no glass container to avoid performance issues
+            HStack(spacing: 12) {
+                Text("\(RSVPEngine.minWPM)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
 
-                    Slider(
-                        value: Binding(
-                            get: { Double(wpm) },
-                            set: { wpm = Int($0) }
-                        ),
-                        in: Double(RSVPEngine.minWPM)...Double(RSVPEngine.maxWPM),
-                        step: 25
-                    )
-                    .frame(width: 200)
-
-                    Text("\(RSVPEngine.maxWPM)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Button {
-                        withAnimation(.bouncy) {
-                            isExpanded = false
+                Slider(
+                    value: $sliderValue,
+                    in: Double(RSVPEngine.minWPM)...Double(RSVPEngine.maxWPM),
+                    step: 50,
+                    onEditingChanged: { editing in
+                        if !editing {
+                            // Only update engine when user releases slider
+                            wpm = Int(sliderValue)
                         }
-                    } label: {
-                        Image(systemName: "checkmark")
-                            .frame(width: 32, height: 32)
                     }
-                    .glassEffect(.regular.interactive())
-                    .glassEffectID("wpmToggle", in: wpmNamespace)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .glassEffect(.regular, in: .capsule)
-            } else {
-                // Collapsed button
+                )
+                .frame(width: 200)
+
+                Text("\(Int(sliderValue))")
+                    .font(.caption)
+                    .monospacedDigit()
+                    .frame(width: 40)
+
                 Button {
-                    withAnimation(.bouncy) {
-                        isExpanded = true
+                    wpm = Int(sliderValue)
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isExpanded = false
                     }
                 } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "speedometer")
-                        Text("\(wpm) WPM")
-                            .monospacedDigit()
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title2)
                 }
-                .glassEffect(.regular.interactive())
-                .glassEffectID("wpmToggle", in: wpmNamespace)
+                .buttonStyle(.plain)
             }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+            .background(.regularMaterial, in: Capsule())
+        } else {
+            // Collapsed button
+            Button {
+                sliderValue = Double(wpm)
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isExpanded = true
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "speedometer")
+                    Text("\(wpm) WPM")
+                        .monospacedDigit()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+            }
+            .buttonStyle(.plain)
+            .background(.regularMaterial, in: Capsule())
         }
     }
 }

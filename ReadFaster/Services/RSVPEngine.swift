@@ -9,7 +9,11 @@ final class RSVPEngine: ObservableObject {
     @Published private(set) var isPlaying: Bool = false
     @Published var wordsPerMinute: Int = 300 {
         didSet {
-            wordsPerMinute = min(max(wordsPerMinute, Self.minWPM), Self.maxWPM)
+            let clamped = min(max(wordsPerMinute, Self.minWPM), Self.maxWPM)
+            if wordsPerMinute != clamped {
+                wordsPerMinute = clamped
+            }
+            // Don't restart timer on every change - it will pick up new speed on next word
         }
     }
 
