@@ -14,6 +14,9 @@ struct ContentView: View {
     @State private var showingImport = false
     @State private var searchText = ""
     @State private var navigationPath = NavigationPath()
+    @State private var isImporting = false
+    @State private var importError: String?
+    @State private var showingImportError = false
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -56,6 +59,82 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .importBook)) { _ in
             showingImport = true
+        }
+        .onOpenURL { url in
+            handleIncomingFile(url)
+        }
+        .overlay {
+            if isImporting {
+                ZStack {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .controlSize(.large)
+                        Text("Importing book...")
+                            .font(.headline)
+                    }
+                    .padding(32)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                }
+            }
+        }
+        .alert("Import Error", isPresented: $showingImportError) {
+            Button("OK") { }
+        } message: {
+            Text(importError ?? "Failed to import book")
+        }
+    }
+
+    private func handleIncomingFile(_ url: URL) {
+        // Check if it's a supported file type
+        let ext = url.pathExtension.lowercased()
+        let supportedExtensions = ["epub", "pdf", "txt", "text", "md"]
+
+        guard supportedExtensions.contains(ext) else {
+            importError = "Unsupported file type: .\(ext)"
+            showingImportError = true
+            return
+        }
+
+        Task {
+            await importFile(from: url)
+        }
+    }
+
+    private func importFile(from url: URL) async {
+        await MainActor.run {
+            isImporting = true
+        }
+
+        defer {
+            Task { @MainActor in
+                isImporting = false
+            }
+        }
+
+        do {
+            // Start accessing security-scoped resource
+            let accessing = url.startAccessingSecurityScopedResource()
+            defer {
+                if accessing {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            let storage = StorageService(modelContext: modelContext)
+            let book = try await storage.importBook(from: url)
+
+            await MainActor.run {
+                // Switch to library tab and select the new book
+                selectedTab = .library
+                selectedBook = book
+            }
+        } catch {
+            await MainActor.run {
+                importError = error.localizedDescription
+                showingImportError = true
+            }
         }
     }
 }
