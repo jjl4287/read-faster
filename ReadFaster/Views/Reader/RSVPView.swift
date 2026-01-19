@@ -149,16 +149,17 @@ struct RSVPView: View {
     @ViewBuilder
     private func wordDisplayArea(geometry: GeometryProxy) -> some View {
         VStack(spacing: 0) {
-            // Sentence context - dynamic height, fixed max
+            // Sentence context - dynamic height, clipped to bounds
             if engine.showSentenceContext && !engine.currentSentenceWords.isEmpty {
                 SentenceContextView(
                     words: engine.currentSentenceWords,
                     currentWordIndex: engine.currentWordIndexInSentence
                 )
-                .frame(maxWidth: min(geometry.size.width * 0.95, 600), maxHeight: 160)
+                .frame(maxWidth: min(geometry.size.width * 0.95, 600), maxHeight: 180)
                 .fixedSize(horizontal: false, vertical: true)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-                .padding(.bottom, 20)
+                .padding(.bottom, 16)
             }
             
             // Main RSVP word - always in the same position

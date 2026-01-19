@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Displays the current sentence with the active word highlighted
-/// Renders as a natural paragraph with minimal styling
+/// Renders as a natural paragraph with smooth underline highlight
 struct SentenceContextView: View {
     let words: [String]
     let currentWordIndex: Int
@@ -10,13 +10,14 @@ struct SentenceContextView: View {
         if words.isEmpty {
             EmptyView()
         } else {
-            ParagraphFlowLayout(spacing: 5, lineSpacing: 8) {
+            ParagraphFlowLayout(spacing: 5, lineSpacing: 10) {
                 ForEach(Array(words.enumerated()), id: \.offset) { index, word in
                     wordView(word: word, index: index)
                 }
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 16)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+            .clipped() // Prevent overflow
         }
     }
     
@@ -25,17 +26,16 @@ struct SentenceContextView: View {
         let isCurrent = index == currentWordIndex
         let isPast = index < currentWordIndex
         
-        // All words have identical sizing - only color changes
         Text(word)
-            .font(AppFont.regular(size: 17))
+            .font(AppFont.regular(size: 16))
             .foregroundStyle(wordColor(isCurrent: isCurrent, isPast: isPast))
-            .background {
+            .overlay(alignment: .bottom) {
                 if isCurrent {
-                    // Underline-style highlight that doesn't affect layout
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Color.accentColor.opacity(0.2))
-                        .padding(.horizontal, -4)
-                        .padding(.vertical, -2)
+                    // Smooth underline highlight
+                    Rectangle()
+                        .fill(Color.accentColor)
+                        .frame(height: 2)
+                        .offset(y: 2)
                 }
             }
     }
@@ -54,7 +54,7 @@ struct SentenceContextView: View {
 /// A flow layout optimized for paragraph-like text display
 struct ParagraphFlowLayout: Layout {
     var spacing: CGFloat = 5
-    var lineSpacing: CGFloat = 8
+    var lineSpacing: CGFloat = 10
     
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let result = layout(proposal: proposal, subviews: subviews)
