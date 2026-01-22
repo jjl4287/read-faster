@@ -650,6 +650,8 @@
 				DEVELOPMENT_TEAM = 5JZV7V6Y4Z;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ReadFaster/Resources/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Read Faster";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.books";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -718,6 +720,8 @@
 				DEVELOPMENT_TEAM = 5JZV7V6Y4Z;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ReadFaster/Resources/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Read Faster";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.books";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
