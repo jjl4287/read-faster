@@ -1,5 +1,6 @@
 # Xcode
-*.xcodeproj/project.xcworkspace/
+*.xcodeproj/project.xcworkspace/*
+!*.xcodeproj/project.xcworkspace/xcshareddata/
 *.xcodeproj/xcuserdata/
 *.xcworkspace/xcuserdata/
 DerivedData/
@@ -23,7 +24,7 @@ xcuserdata/
 # SPM
 .build/
 .swiftpm/
-Package.resolved
+# Package.resolved - committed for Xcode Cloud compatibility
 
 # CocoaPods
 Pods/
